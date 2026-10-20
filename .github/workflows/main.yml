@@ -1,0 +1,52 @@
+
+name: Build PSShop APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Inspect project files
+        run: |
+          echo "Repository files:"
+          find . -maxdepth 4 -type f | sort | head -300
+
+      - name: Build APK if Gradle project exists
+        run: |
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug
+          elif [ -f android/gradlew ]; then
+            cd android
+            chmod +x gradlew
+            ./gradlew assembleDebug
+          else
+            echo "No Gradle project found at repository root or android/"
+            exit 1
+          fi
+
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PSShop-Standalone-APK
+          path: |
+            **/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
